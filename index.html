@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Workflow Cook Book — refactoring-workflow & new-feature-workflow</title>
+<style>
+:root{
+  --bg: #0d1117;
+  --bg-2: #151c25;
+  --bg-3: #1c2530;
+  --border: #2a3440;
+  --fg: #e6edf3;
+  --fg-2: #b1bac4;
+  --fg-3: #7d8590;
+  --accent: #4493f8;
+  --accent-2: #2f81f7;
+  --green: #3fb950;
+  --green-bg: rgba(63,185,80,.12);
+  --yellow: #d29922;
+  --yellow-bg: rgba(210,153,34,.12);
+  --red: #f85149;
+  --red-bg: rgba(248,81,73,.12);
+  --purple: #bc8cff;
+  --code: #2d333b;
+  --shadow: 0 6px 24px rgba(0,0,0,.35);
+  --radius: 10px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:15px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+code{
+  font-family:var(--mono); font-size:.9em;
+  background:var(--code); padding:1px 6px; border-radius:4px;
+  color:#e6edf3;
+}
+pre{
+  font-family:var(--mono); font-size:.86em; line-height:1.55;
+  background:var(--code); padding:14px 18px; border-radius:8px;
+  overflow-x:auto; border:1px solid var(--border);
+  margin:0;
+}
+pre code{background:transparent; padding:0}
+hr{border:none; border-top:1px solid var(--border); margin:2.5rem 0}
+
+/* layout */
+.container{display:grid; grid-template-columns: 240px 1fr; max-width:1280px; margin:0 auto; gap:48px; padding:0 32px}
+@media (max-width: 980px){.container{grid-template-columns:1fr; gap:0; padding:0 20px}}
+
+aside.toc{
+  position:sticky; top:0; align-self:start;
+  height:100vh; padding:32px 0 32px;
+  overflow-y:auto;
+  border-right:1px solid var(--border);
+}
+@media (max-width: 980px){aside.toc{position:static; height:auto; border-right:0; border-bottom:1px solid var(--border); padding:16px 0}}
+aside.toc h4{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-3); margin:0 0 12px}
+aside.toc ol{list-style:none; padding:0; margin:0; counter-reset: tocitem}
+aside.toc ol li{counter-increment: tocitem; margin:.35em 0}
+aside.toc ol li a{
+  display:block; color:var(--fg-2); padding:6px 10px;
+  border-radius:6px; font-size:13.5px;
+  border:1px solid transparent;
+}
+aside.toc ol li a::before{
+  content: counter(tocitem) ". ";
+  color:var(--fg-3); font-variant-numeric:tabular-nums;
+}
+aside.toc ol li a:hover{background:var(--bg-2); color:var(--fg); text-decoration:none}
+
+main{padding: 40px 0 96px; min-width:0}
+
+/* hero */
+.hero{
+  background: radial-gradient(ellipse at top left, rgba(68,147,248,.18) 0%, transparent 40%),
+              radial-gradient(ellipse at bottom right, rgba(188,140,255,.14) 0%, transparent 40%),
+              var(--bg-2);
+  border:1px solid var(--border); border-radius:16px; padding:36px 36px 28px;
+  margin-bottom:40px;
+}
+.hero .eyebrow{display:inline-block; font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--accent); border:1px solid rgba(68,147,248,.3); padding:4px 10px; border-radius:999px; margin-bottom:14px}
+.hero h1{font-size:2.4em; line-height:1.15; margin:0 0 8px; letter-spacing:-.01em}
+.hero .lede{color:var(--fg-2); font-size:1.05em; max-width:62ch; margin:0 0 24px}
+.hero .commands{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px}
+@media (max-width: 720px){.hero .commands{grid-template-columns:1fr}}
+.hero .cmd{
+  background:#0a0e13; border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+  font-family:var(--mono); font-size:14px; position:relative;
+}
+.hero .cmd .label{display:block; color:var(--fg-3); font-family:var(--sans); font-size:11px;
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px}
+.hero .cmd .slash{color:var(--accent); font-weight:600}
+.hero .cmd .arg{color:var(--fg-2)}
+.hero .meta{color:var(--fg-3); font-size:13px; margin-top:18px; display:flex; gap:24px; flex-wrap:wrap}
+
+h2{font-size:1.55em; margin:48px 0 16px; letter-spacing:-.005em; scroll-margin-top:24px}
+h2 .num{color:var(--fg-3); font-variant-numeric:tabular-nums; margin-right:.5em; font-weight:500}
+h3{font-size:1.15em; margin:28px 0 10px}
+p{margin:.8em 0}
+
+.lead{color:var(--fg-2); font-size:1.05em; max-width:68ch}
+
+/* mode pill */
+.pill{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; letter-spacing:.04em; vertical-align:middle}
+.pill.small{background:var(--green-bg); color:var(--green)}
+.pill.medium{background:var(--yellow-bg); color:var(--yellow)}
+.pill.full{background:var(--red-bg); color:var(--red)}
+.pill.gate{background:rgba(188,140,255,.13); color:var(--purple)}
+
+/* callout */
+.callout{
+  border:1px solid var(--border); border-left:4px solid var(--accent);
+  background:var(--bg-2); border-radius:8px; padding:16px 20px; margin:20px 0;
+}
+.callout.warn{border-left-color:var(--yellow)}
+.callout.danger{border-left-color:var(--red)}
+.callout.tip{border-left-color:var(--green)}
+.callout .head{font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px}
+
+/* steps */
+.steps{list-style:none; padding:0; margin:24px 0; display:grid; gap:14px; counter-reset:step}
+.steps li{
+  position:relative; counter-increment:step;
+  background:var(--bg-2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 22px 18px 64px;
+}
+.steps li::before{
+  content: counter(step);
+  position:absolute; top:18px; left:18px;
+  width:30px; height:30px; border-radius:50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color:#fff; font-weight:700; font-size:13px; font-family:var(--mono);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 4px 12px rgba(68,147,248,.3);
+}
+.steps li h4{margin:0 0 6px; font-size:1.05em}
+.steps li p{margin:.3em 0; color:var(--fg-2)}
+.steps li .duration{display:inline-block; font-size:11.5px; color:var(--fg-3);
+  font-family:var(--mono); margin-left:8px; padding:1px 7px; background:var(--code); border-radius:4px}
+
+/* switchboard */
+.switchboard{
+  border:1px solid var(--border); border-radius:var(--radius);
+  overflow:hidden; margin:20px 0;
+}
+.switchboard table{border-collapse:collapse; width:100%; font-size:14px}
+.switchboard th, .switchboard td{padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+.switchboard th{background:var(--bg-3); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-2)}
+.switchboard tr:last-child td{border-bottom:0}
+.switchboard tr:hover td{background:rgba(255,255,255,.015)}
+.switchboard td:first-child{font-weight:600}
+.switchboard .skip{color:var(--fg-3); font-style:italic}
+.switchboard .check{color:var(--green); font-weight:600}
+
+/* examples (tabs) */
+.tabs{display:flex; border-bottom:1px solid var(--border); margin: 24px 0 0; gap:4px}
+.tab{
+  background:transparent; border:none; cursor:pointer;
+  font:inherit; color:var(--fg-3); padding:10px 18px;
+  border-bottom:2px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+.tab:hover{color:var(--fg)}
+.tab.active{color:var(--fg); border-bottom-color:var(--accent); font-weight:600}
+.tab-panel{display:none; animation: fadeIn .25s ease}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:translateY(0)}}
+
+.timeline{
+  list-style:none; padding:0; margin:18px 0; position:relative;
+}
+.timeline::before{
+  content:""; position:absolute; left:14px; top:8px; bottom:8px;
+  width:2px; background: linear-gradient(180deg, var(--accent), var(--purple));
+  opacity:.4;
+}
+.timeline li{
+  position:relative; padding:8px 0 8px 40px; min-height:36px;
+}
+.timeline li::before{
+  content:""; position:absolute; left:8px; top:14px;
+  width:14px; height:14px; border-radius:50%;
+  background:var(--bg); border:2px solid var(--accent);
+}
+.timeline li.gate::before{border-color:var(--purple); background:rgba(188,140,255,.18)}
+.timeline li.skip::before{border-color:var(--fg-3); background:transparent}
+.timeline li.block::before{border-color:var(--red); background:rgba(248,81,73,.18)}
+.timeline li.done::before{border-color:var(--green); background:rgba(63,185,80,.18)}
+.timeline li .t{display:inline-block; font-family:var(--mono); font-size:12px; color:var(--fg-3); margin-right:10px; min-width:70px}
+.timeline li .what{color:var(--fg-2)}
+.timeline li.gate .what{color:var(--purple)}
+.timeline li.skip .what{color:var(--fg-3); text-decoration:line-through; opacity:.7}
+.timeline li.block .what{color:var(--red)}
+
+/* do / don't */
+.dodont{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:18px 0}
+@media (max-width:720px){.dodont{grid-template-columns:1fr}}
+.dodont section{
+  border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--bg-2); padding:18px 22px;
+}
+.dodont section.do{border-top:3px solid var(--green)}
+.dodont section.dont{border-top:3px solid var(--red)}
+.dodont section h4{margin:0 0 10px; font-size:1em; display:flex; align-items:center; gap:8px}
+.dodont section ul{margin:0; padding-left:20px; color:var(--fg-2); font-size:14px; line-height:1.7}
+.dodont section.do li::marker{color:var(--green)}
+.dodont section.dont li::marker{color:var(--red)}
+
+/* d-decision card */
+.dcard{
+  background:#0a0e13; border:1px solid var(--red); border-left-width:4px;
+  border-radius:8px; padding:16px 20px; font-family:var(--mono); font-size:13px;
+  white-space:pre-wrap; line-height:1.6; margin:14px 0;
+}
+.dcard .k{color:var(--fg-3)}
+.dcard .v{color:var(--fg)}
+.dcard .stop{color:var(--red); font-weight:600}
+
+/* tips */
+.tips{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin:18px 0}
+.tip{
+  background:var(--bg-2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 18px; position:relative; overflow:hidden;
+}
+.tip .head{font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:8px}
+.tip p{margin:0; color:var(--fg-2); font-size:13.5px; line-height:1.55}
+.tip::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+}
+.tip.green::before{background:var(--green)}
+.tip.yellow::before{background:var(--yellow)}
+.tip.blue::before{background:var(--accent)}
+.tip.purple::before{background:var(--purple)}
+.tip.gray::before{background:var(--fg-3)}
+
+/* footer / quick ref */
+.quickref{
+  margin-top:48px; padding:28px; border-radius:var(--radius);
+  background:linear-gradient(135deg, var(--bg-2), var(--bg-3));
+  border:1px solid var(--border);
+}
+.quickref h3{margin-top:0}
+.quickref-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px; margin-top:14px}
+.qr-item{background:#0a0e13; border:1px solid var(--border); border-radius:8px; padding:14px 18px}
+.qr-item .qr-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-3); margin-bottom:6px}
+.qr-item .qr-val{font-family:var(--mono); font-size:13.5px; color:var(--fg)}
+
+footer.foot{margin-top:48px; padding:24px 0; border-top:1px solid var(--border); color:var(--fg-3); font-size:13px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+
+/* print */
+@media print{
+  aside.toc{display:none}
+  .container{display:block; padding:0}
+  body{background:#fff; color:#000}
+  .hero, .callout, .steps li, .switchboard, .dodont section, .tip, .quickref, .dcard, pre{
+    background:#fff !important; color:#000 !important; border-color:#ccc !important;
+  }
+  a{color:#000; text-decoration:underline}
+  pre, code, .dcard{font-size:11px}
+}
+
+/* small */
+.kbd{
+  font-family:var(--mono); font-size:.85em; padding:1px 6px; background:var(--bg-3);
+  border:1px solid var(--border); border-bottom-width:2px; border-radius:4px;
+}
+.lock{display:inline-block; font-size:11px; color:var(--fg-3); font-family:var(--mono);
+  border:1px solid var(--border); border-radius:4px; padding:0 6px; margin-left:8px}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <aside class="toc" aria-label="Table of contents">
+    <h4>AskNebula Claude Workflow</h4>
+    <ol>
+      <li><a href="#start">Quick Start</a></li>
+      <li><a href="#flow">The 5-Step Flow</a></li>
+      <li><a href="#switchboard">Mode Switchboard</a></li>
+      <li><a href="#examples">Walkthroughs</a></li>
+      <li><a href="#dblock">D-Decision Blockers</a></li>
+      <li><a href="#mistakes">Mis-classification Playbook</a></li>
+      <li><a href="#dodont">Do / Don't</a></li>
+      <li><a href="#tips">Tips</a></li>
+      <li><a href="#quickref">Quick Reference</a></li>
+    </ol>
+  </aside>
+
+  <main>
+    <section class="hero">
+      <span class="eyebrow">AskNebula Claude Workflow · v1.1 · 2026-05-05</span>
+      <h1>Workflow Cook Book</h1>
+      <p class="lede">Two skills. Three modes. One classifier. Скіли самі обирають рівень церемонії за scope — твоя задача обрати <em>тип</em> задачі, а не <em>розмір</em>.</p>
+
+      <div class="commands">
+        <div class="cmd">
+          <span class="label">Restructuring existing code</span>
+          <span class="slash">/refactoring-workflow</span> <span class="arg">&lt;опис&gt;</span>
+        </div>
+        <div class="cmd">
+          <span class="label">New functionality</span>
+          <span class="slash">/new-feature-workflow</span> <span class="arg">&lt;опис&gt;</span>
+        </div>
+      </div>
+
+      <div class="meta">
+        <span>📖 ~10 min read</span>
+        <span>🎯 Audience: FE team</span>
+        <span>🔁 Last updated: 2026-05-05</span>
+      </div>
+    </section>
+
+    <!-- 1. Quick Start -->
+    <section id="start">
+      <h2><span class="num">1</span>Quick Start</h2>
+      <p class="lead">Не вибираєш розмір наперед. Workflow сам класифікує задачу на <span class="pill small">SMALL</span> · <span class="pill medium">MEDIUM</span> · <span class="pill full">FULL</span> після Phase 1 і пройде відповідний шлях.</p>
+
+      <h3>Який скіл обрати?</h3>
+      <table class="switchboard"><tbody>
+        <tr><th style="width:40%">Якщо задача — це...</th><th>Скіл</th></tr>
+        <tr><td>Реструктуризація існуючого коду без нової поведінки (rename, split, extract, FSD migration, cross-platform unify)</td><td><code>/refactoring-workflow</code></td></tr>
+        <tr><td>Нова функціональність (новий екран, API endpoint, saga, FF rollout, інтеграція)</td><td><code>/new-feature-workflow</code></td></tr>
+        <tr><td>І те, і інше в одному тікеті</td><td><strong>Розділити на 2 тікети.</strong> Refactor PR і feature PR мають різні review profiles — змішування ламає review дисципліну.</td></tr>
+      </tbody></table>
+
+      <div class="callout tip">
+        <div class="head">💡 Не парся над розміром</div>
+        Phase 0 (audit) запускається завжди — навіть для того, що виглядає 5-хвилинним. 1 хв insurance проти години пошуку hidden dependency.
+      </div>
+    </section>
+
+    <!-- 2. The 5-Step Flow -->
+    <section id="flow">
+      <h2><span class="num">2</span>The 5-Step Flow</h2>
+      <p class="lead">Що ти бачиш, коли інвокаєш скіл — від першої команди до зеленого MR.</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Інвокація <span class="duration">~5 sec</span></h4>
+          <p>Пишеш у Claude Code: <code>/refactoring-workflow CHAT-6234 Уніфікувати TopUpPayment</code> — і повертаєшся пити каву.</p>
+        </li>
+        <li>
+          <h4>Phase 0 — Audit (always-on) <span class="duration">~1–3 min</span></h4>
+          <p>Запускається <code>pre-flight-auditor</code> (refactor) або <code>feature-reuse-auditor</code> (feature). Шукає hidden deps, схожі фічі, reuse-кандидати.</p>
+          <p><strong>Ти отримуєш:</strong> файл <code>specs/{ticket}/pre-flight.md</code> або <code>reuse-audit.md</code> + питання “підтверджуєш scope?”</p>
+        </li>
+        <li>
+          <h4>Phase 1 — Requirements + Mode Classification <span class="duration">~5–10 min</span></h4>
+          <p><code>requirements-agent</code> пише <code>requirements.md</code> з трьома секціями:</p>
+          <ul>
+            <li>User Stories + EARS criteria</li>
+            <li><strong>§ Delivery Model</strong> (single-MR / stacked / multi-MR)</li>
+            <li><strong>§ Complexity Classification</strong> з <code>Mode: SMALL | MEDIUM | FULL</code></li>
+          </ul>
+          <p><span class="pill gate">🚪 USER GATE</span> Підтверджуєш або редагуєш <code>Mode:</code> руками.</p>
+        </li>
+        <li>
+          <h4>Phase 2–7 — Auto-execution за Mode <span class="duration">варіюється</span></h4>
+          <p>Orchestrator читає <code>Mode:</code> і виконує тільки потрібні фази (див. <a href="#switchboard">Switchboard</a> нижче). Approval gates з’являються тільки на FULL (Phase 2/3) і на D-decision blockers.</p>
+        </li>
+        <li>
+          <h4>Done <span class="duration">commit + MR</span></h4>
+          <p>SMALL ≈ 15-30 хв, MEDIUM ≈ 1-2 год, FULL ≈ години-дні (за Delivery Model). На виході: PR(и) + <code>history.md</code> (MEDIUM/FULL) або 1-параграф ретро в commit message (SMALL).</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- 3. Switchboard -->
+    <section id="switchboard">
+      <h2><span class="num">3</span>Mode Switchboard</h2>
+      <p class="lead">Що відбувається на кожній фазі — залежно від Mode. Це і є "router pattern" з Anthropic engineering — після Phase 1 orchestrator обирає шлях.</p>
+
+      <div class="switchboard">
+      <table>
+        <thead><tr>
+          <th style="width:14%">Phase</th>
+          <th style="width:28%"><span class="pill small">SMALL</span></th>
+          <th style="width:28%"><span class="pill medium">MEDIUM</span></th>
+          <th style="width:30%"><span class="pill full">FULL</span></th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>0 · Audit</td>
+            <td><span class="check">✓</span> slim audit</td>
+            <td><span class="check">✓</span> full audit</td>
+            <td><span class="check">✓</span> full audit</td>
+          </tr>
+          <tr>
+            <td>1 · Requirements</td>
+            <td>1–2 stories + Mode</td>
+            <td>standard</td>
+            <td>standard + Delivery Model lock</td>
+          </tr>
+          <tr>
+            <td>2 · Design</td>
+            <td><span class="skip">⏭ skip</span></td>
+            <td>slim <code>design.md</code><br><span style="color:var(--fg-3); font-size:12.5px">Overview / Architecture / Components</span></td>
+            <td>FULL <code>design.md</code><br><span style="color:var(--fg-3); font-size:12.5px">+ Mechanics A–L / SCSS Ban / D-decisions / API Contract / FF Wiring / Loading-Error</span></td>
+          </tr>
+          <tr>
+            <td>3 · Tasks</td>
+            <td><span class="skip">⏭ skip</span></td>
+            <td>1 cluster<br><span style="color:var(--fg-3); font-size:12.5px">no §S/§F ceremony</span></td>
+            <td>clusters + §S1/§S2/§S3 (refactor)<br>or §F1/§F2/§F3 (feature)</td>
+          </tr>
+          <tr>
+            <td>4 · Implementation</td>
+            <td><code>implementor</code><br><span style="color:var(--fg-3); font-size:12.5px">light-spec, single dispatch</span></td>
+            <td><code>implementation-agent</code><br><span style="color:var(--fg-3); font-size:12.5px">strict-spec, 1 cluster</span></td>
+            <td><code>implementation-agent</code> per-cluster<br><span style="color:var(--fg-3); font-size:12.5px">+ D-decision blocker + checkpoints</span></td>
+          </tr>
+          <tr>
+            <td>5 · Verification</td>
+            <td>tsc + lint + test + build</td>
+            <td>+ <code>plan-verifier</code> (sonnet fallback)</td>
+            <td>+ §S2 sweep + push-back / edge-case click-through</td>
+          </tr>
+          <tr>
+            <td>6 · MR</td>
+            <td>1 commit</td>
+            <td>1–3 commits, single PR</td>
+            <td>per Delivery Model<br><span style="color:var(--fg-3); font-size:12.5px">+ docs-sync commit BEFORE release merge</span></td>
+          </tr>
+          <tr>
+            <td>7 · Retrospective</td>
+            <td>commit-msg note</td>
+            <td>slim <code>history.md</code></td>
+            <td><code>history.md</code> + <strong>Skill calibration</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Класифікаційний рубрикатор</h3>
+      <p>Це те, що <code>requirements-agent</code> прописує в <code>## Complexity Classification</code>. <strong>Final Mode = найвищий-tier mode, тригернутий ANY рядком</strong>.</p>
+
+      <div class="switchboard">
+      <table>
+        <thead><tr>
+          <th style="width:32%">Signal</th>
+          <th>Refactor trigger</th>
+          <th>Feature trigger</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Files touched</td><td>SMALL ≤2 / MEDIUM 3–10 / FULL 11+</td><td>SMALL = 1 slice / MEDIUM = 1–2 + ≤1 endpoint / FULL = multi-slice</td></tr>
+          <tr><td>Cross-platform divergence (desktop + mobile)</td><td>any → <span class="pill full">FULL</span></td><td>n/a</td></tr>
+          <tr><td>New behavior introduced</td><td>any → switch to <em>feature workflow</em></td><td>n/a</td></tr>
+          <tr><td>New endpoint / saga / state slice</td><td>any → <span class="pill medium">MEDIUM</span> min</td><td>any → <span class="pill medium">MEDIUM</span> min</td></tr>
+          <tr><td>Feature-flag wiring</td><td>any → <span class="pill full">FULL</span></td><td>any → <span class="pill full">FULL</span></td></tr>
+          <tr><td>SCSS / structural divergence</td><td>any → <span class="pill full">FULL</span></td><td>n/a</td></tr>
+          <tr><td>Cross-feature integration (3+ existing)</td><td>any → <span class="pill full">FULL</span></td><td>any → <span class="pill full">FULL</span></td></tr>
+          <tr><td>Multi-MR / stacked delivery</td><td>any → <span class="pill full">FULL</span></td><td>any → <span class="pill full">FULL</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- 4. Examples -->
+    <section id="examples">
+      <h2><span class="num">4</span>Walkthroughs — два кейси</h2>
+      <p class="lead">Що ти реально бачиш у консолі. Перемикай таби нижче.</p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-target="ex-small">A · SMALL refactor</button>
+        <button class="tab" data-target="ex-full">B · FULL feature</button>
+      </div>
+
+      <div class="tab-panel active" id="ex-small">
+        <h3>"Rename <code>formatPrice</code> → <code>formatCurrency</code> у 2 файлах"</h3>
+        <ul class="timeline">
+          <li><span class="t">~5 sec</span> <span class="what">Ти: <code>/refactoring-workflow Rename formatPrice → formatCurrency</code></span></li>
+          <li><span class="t">~1 min</span> <span class="what">Phase 0 · <code>pre-flight-auditor</code> → 0 hidden deps, 2 caller files</span></li>
+          <li><span class="t">~5 min</span> <span class="what">Phase 1 · <code>requirements.md</code> з <span class="pill small">Mode: SMALL</span></span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: "ok"</span></li>
+          <li class="skip"><span class="t">skip</span> <span class="what">Phase 2 — Design</span></li>
+          <li class="skip"><span class="t">skip</span> <span class="what">Phase 3 — Tasks</span></li>
+          <li><span class="t">~2 min</span> <span class="what">Phase 4 · <code>implementor</code> робить rename + править 2 каллери</span></li>
+          <li><span class="t">~1 min</span> <span class="what">Phase 5 · tsc + lint + test + build → all green</span></li>
+          <li><span class="t">~1 min</span> <span class="what">Phase 6 · 1 commit + <code>glab mr create</code></span></li>
+          <li class="done"><span class="t">done</span> <span class="what">Phase 7 · 1-параграф ретро в commit message</span></li>
+        </ul>
+        <p style="color:var(--fg-2)"><strong>Загалом ~10 хв активного часу.</strong> Файли в <code>specs/</code>: тільки <code>pre-flight.md</code> + <code>requirements.md</code>. Жодного <code>design.md</code> / <code>tasks.md</code> / <code>history.md</code>.</p>
+      </div>
+
+      <div class="tab-panel" id="ex-full">
+        <h3>"Subscription upsell screen + new endpoint + variation FF"</h3>
+        <ul class="timeline">
+          <li><span class="t">~5 sec</span> <span class="what">Ти: <code>/new-feature-workflow CHAT-6300 Subscription upsell with variation FF</code></span></li>
+          <li><span class="t">~3 min</span> <span class="what">Phase 0 · <code>feature-reuse-auditor</code> → 4 REUSE candidates, 6 integration touchpoints, FF strategy = variation-based</span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: апрувиш scope</span></li>
+          <li><span class="t">~10 min</span> <span class="what">Phase 1 · <code>requirements.md</code> з 5 user stories + <span class="pill full">Mode: FULL</span> (тригер: FF wiring + new endpoint + multi-slice)</span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: "ok, FULL правильний"</span></li>
+          <li><span class="t">~15 min</span> <span class="what">Phase 2 · <code>design.md</code> з Component Shape + API Contract + State Shape + FF Wiring + Loading/Error</span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: апрувиш design</span></li>
+          <li><span class="t">~10 min</span> <span class="what">Phase 3 · <code>tasks.md</code> з 3 vertical slices + §F1/§F2/§F3</span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: апрувиш tasks</span></li>
+          <li><span class="t">~25 min</span> <span class="what">Phase 4 · Slice 1 · <code>implementation-agent</code> → ✅ COMPLETED</span></li>
+          <li class="block"><span class="t">block</span> <span class="what">Phase 4 · Slice 2 · 🛑 BLOCKED — "API Contract ambiguous on retry policy"</span></li>
+          <li class="gate"><span class="t">gate</span> <span class="what">Ти: обираєш option 1 → orchestrator commits D3 → resume</span></li>
+          <li><span class="t">~30 min</span> <span class="what">Phase 4 · Slice 2 · resumed → ✅ COMPLETED</span></li>
+          <li><span class="t">~25 min</span> <span class="what">Phase 4 · Slice 3 · ✅ COMPLETED</span></li>
+          <li><span class="t">~20 min</span> <span class="what">Phase 5 · tsc + lint + jest + builds + plan-verifier + ручний click-through (golden + slow network + error + cycle через FF варіанти)</span></li>
+          <li><span class="t">~15 min</span> <span class="what">Phase 6 · docs-sync commit → release merge → conflict resolve → push → <code>glab mr create</code></span></li>
+          <li class="done"><span class="t">done</span> <span class="what">Phase 7 · <code>history.md</code> + <strong>Skill calibration section</strong> (важливо — feature mode experimental)</span></li>
+        </ul>
+        <p style="color:var(--fg-2)"><strong>Загалом ~3-4 год активної взаємодії</strong>, розкидано на 1-2 дні. На виході: <code>specs/</code> з усіма артефактами + 1 PR (за Delivery Model).</p>
+      </div>
+    </section>
+
+    <!-- 5. D-decision -->
+    <section id="dblock">
+      <h2><span class="num">5</span>D-Decision Blockers (FULL mode escalation)</h2>
+      <p class="lead">Коли <code>implementation-agent</code> зустрічає невирішену неоднозначність — він <strong>зупиняється</strong> і ескалює до тебе. <em>Не auto-resolve</em>. Так працює spec-first дисципліна.</p>
+
+      <h3>Як виглядає blocker</h3>
+      <pre class="dcard"><span class="stop">🛑 BLOCKED</span> — Slice 2, Layer "API client"
+
+<span class="k">Blocker class:</span>     <span class="v">B (API contract ambiguity)</span>
+<span class="k">Divergence:</span>        <span class="v">backend doc каже retry on 503,</span>
+                   <span class="v">але не вказує backoff strategy</span>
+<span class="k">D-decisions used:</span>  <span class="v">D1, D2 — none applied</span>
+<span class="k">Proposed options:</span>
+  1. Exponential backoff (1s, 2s, 4s, max 3 attempts)
+  2. Manual retry only (no auto)
+  3. Defer to product call
+
+<span class="k">Recommendation:</span>    <span class="v">Option 1</span>
+
+<span class="stop">Awaiting D-decision approval before resuming slice 2.</span></pre>
+
+      <h3>Що ти робиш</h3>
+      <ol>
+        <li>Обираєш одну з опцій (або кажеш свою)</li>
+        <li>Orchestrator <strong>редагує <code>design.md</code></strong> додаючи новий блок <code>### D3 — Retry policy</code> з Decision / Rationale / Affected components</li>
+        <li>Orchestrator <strong>робить commit</strong>: <code>chore: add D3 retry policy</code></li>
+        <li>Тільки <em>потім</em> resume агента: <code>"D3 approved, resume slice 2 from blocker"</code></li>
+      </ol>
+
+      <div class="callout">
+        <div class="head">🔒 Чому саме так</div>
+        <p>Spec оновлюється <strong>перед</strong> кодом, що його реалізує. Жодного spec drift, повна аудит-стежка. Якщо через 6 місяців хтось питає "чого тут exponential backoff" — відповідь у <code>design.md → §Decisions → D3</code>.</p>
+      </div>
+    </section>
+
+    <!-- 6. Mistakes -->
+    <section id="mistakes">
+      <h2><span class="num">6</span>Mis-classification Playbook</h2>
+      <p class="lead">LLM-класифікація може помилитись. User Gate — твій cheap override.</p>
+
+      <h3>Сценарій 1: Mode здається занизьким</h3>
+      <p>Класифікатор каже <span class="pill small">SMALL</span>, але ти знаєш що там cross-platform divergence.</p>
+      <p><strong>Дія:</strong> На Phase 1 user gate редагуєш <code>Mode: SMALL</code> → <code>Mode: FULL</code> у <code>requirements.md</code>. Orchestrator перекалібрується автоматично.</p>
+
+      <h3>Сценарій 2: Mode здається завищеним</h3>
+      <p>Класифікатор поставив <span class="pill full">FULL</span>, але ти бачиш що це чесно 2 файли.</p>
+      <p><strong>Дія:</strong> Те ж саме — едітиш <code>Mode:</code> руками. Phase 2/3 будуть пропущені/спрощені.</p>
+
+      <h3>Сценарій 3: Mid-flight зрозумів що Mode неправильний</h3>
+      <p>Phase 4 implementation: <code>implementor</code> повідомляє "файлів стало >3, треба MEDIUM".</p>
+      <p><strong>Дія:</strong></p>
+      <ol>
+        <li>Зупиняєш агента</li>
+        <li>Повертаєшся на Phase 1, редагуєш <code>Mode:</code> в <code>requirements.md</code></li>
+        <li>Orchestrator резюмує з потрібної фази (наприклад, тепер потрібен <code>design.md</code> → запускає Phase 2)</li>
+      </ol>
+      <div class="callout danger">
+        <div class="head">❌ Не "докручувати specs на льоту"</div>
+        Заборонено додавати <code>design.md</code> вручну посеред Phase 4 без переходу через Phase 1. Це spec drift — і це причина 90% катастроф у refactor-флоу.
+      </div>
+    </section>
+
+    <!-- 7. Do/Don't -->
+    <section id="dodont">
+      <h2><span class="num">7</span>Do / Don't</h2>
+      <div class="dodont">
+        <section class="do">
+          <h4><span style="color:var(--green)">✓</span> Що ти робиш руками</h4>
+          <ul>
+            <li>Обираєш <code>/refactoring-workflow</code> vs <code>/new-feature-workflow</code> за <em>типом</em> задачі</li>
+            <li>Затверджуєш user gates (Phase 0 scope, Phase 1 requirements + Mode, FULL: Phase 2 design, Phase 3 tasks)</li>
+            <li>Вирішуєш D-decision blockers (FULL mode)</li>
+            <li>Робиш ручний click-through після implementation</li>
+            <li>Якщо Mode неправильний — едітиш <code>Mode:</code> у <code>requirements.md</code> і даєш orchestrator перерахуватись</li>
+            <li>Запускаєш Phase 7 retrospective навіть для невеликих задач — lessons compound</li>
+          </ul>
+        </section>
+        <section class="dont">
+          <h4><span style="color:var(--red)">✗</span> Чого ти НЕ робиш руками</h4>
+          <ul>
+            <li>Не пишеш <code>requirements.md</code> / <code>design.md</code> / <code>tasks.md</code> / <code>pre-flight.md</code> / <code>history.md</code> сам — це роблять агенти</li>
+            <li>Не імплементиш кластери прямо — це робить <code>implementation-agent</code></li>
+            <li>Не пропускаєш Phase 0 навіть для тривіальної задачі</li>
+            <li>Не апрувиш SCSS verbatim copy — має бути breakpoint mixin / variant prop / D-decision (FULL)</li>
+            <li>Не робиш pivot Delivery Model на льоту — re-run Phase 1</li>
+            <li>Не маркуєш feature слайс <em>done</em> поки entry point не wired (§F1 step 7) — це completion bias</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- 8. Tips -->
+    <section id="tips">
+      <h2><span class="num">8</span>Tips з практики</h2>
+      <div class="tips">
+        <div class="tip green">
+          <div class="head">🟢 Phase 0 завжди</div>
+          <p>1 хв insurance vs година пошуку hidden dep. Вірю в "always-on audit" сильніше після CHAT-5953 post-mortem.</p>
+        </div>
+        <div class="tip yellow">
+          <div class="head">🟡 Mode — не закон</div>
+          <p>Якщо рубрика каже FULL, але ти бачиш що задача дрібна — едітиш на MEDIUM. User-override > LLM-класифікація.</p>
+        </div>
+        <div class="tip blue">
+          <div class="head">🔵 D-decisions кумулюються</div>
+          <p>Кожне рішення в <code>design.md</code> стає reference для наступних рефакторів. Не пропускай їх "усно".</p>
+        </div>
+        <div class="tip purple">
+          <div class="head">🟣 Skill calibration критична</div>
+          <p>FULL feature mode — experimental. <code>history.md</code> Skill calibration section — це вхід в v2 правил. Без нього experimental не покращується.</p>
+        </div>
+        <div class="tip gray">
+          <div class="head">⚫ Поганий результат = сигнал до правил</div>
+          <p>Не вініть агентів — записуй в Skill calibration що пішло не так, оновлюємо правила в скілі. Workflow має еволюціонувати.</p>
+        </div>
+        <div class="tip blue">
+          <div class="head">🔵 Не змішуй refactor + feature у одному PR</div>
+          <p>Це різні review profiles. Зміни паралельно у двох воркфлоу + двох PR.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Quick reference -->
+    <section id="quickref" class="quickref">
+      <h3>📋 Quick Reference Card</h3>
+      <p style="color:var(--fg-2); margin-top:0">Друкуй або тримай у вкладці поряд з Claude Code.</p>
+      <div class="quickref-grid">
+        <div class="qr-item">
+          <div class="qr-label">Refactor entry</div>
+          <div class="qr-val">/refactoring-workflow</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">Feature entry</div>
+          <div class="qr-val">/new-feature-workflow</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">Mode location</div>
+          <div class="qr-val">specs/{ticket}/requirements.md → ## Complexity Classification</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">D-decision destination</div>
+          <div class="qr-val">specs/{ticket}/design.md → ## Decisions</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">Always-on phase</div>
+          <div class="qr-val">Phase 0 — Audit (cheap insurance)</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">Mid-flight escalation</div>
+          <div class="qr-val">edit Mode: in requirements.md → re-run Phase 1</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>📚 Workflow Cook Book · Internal · v1.1</span>
+      <span>Source: <code>~/asknebula_spa/.claude/skills/{refactoring,new-feature}-workflow/SKILL.md</code></span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  // tabs
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === target));
+    });
+  });
+  // toc highlight on scroll
+  const links = Array.from(document.querySelectorAll('aside.toc a'));
+  const sections = links.map(a => document.querySelector(a.getAttribute('href')));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        const id = e.target.id;
+        links.forEach(a => a.style.background = a.getAttribute('href') === '#'+id ? 'var(--bg-3)' : '');
+      }
+    });
+  }, { rootMargin: '-30% 0px -55% 0px', threshold: 0 });
+  sections.forEach(s => s && observer.observe(s));
+})();
+</script>
+</body>
+</html>
