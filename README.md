@@ -26,19 +26,19 @@ Single self-contained HTML — no build step, no dependencies, no JS framework.
 The skills themselves live in the codebase at:
 
 ```
-~/asknebula_spa/.claude/skills/
+<your-project>/.claude/skills/
 ├── refactoring-workflow/SKILL.md
 └── new-feature-workflow/SKILL.md
 ```
 
-Plus supporting agents in `~/asknebula_spa/.claude/agents/`:
+Plus supporting agents in `<your-project>/.claude/agents/`:
 
 - `pre-flight-auditor.md` — Phase 0 (refactor)
 - `feature-reuse-auditor.md` — Phase 0 (feature)
 - `requirements-agent.md` — Phase 1 (+ Complexity Classification §6)
 - `tech-design-agent.md` — Phase 2
 - `tasks-agent.md` — Phase 3
-- `implementation-agent.md` — Phase 4
+- `spec-implementor.md` — Phase 4
 - `retrospective-agent.md` — Phase 7
 
 This page documents the *user-facing protocol*. The skills are the executable spec.
@@ -55,4 +55,4 @@ The `eyebrow` text in the hero shows current version + last updated date. Bump o
 
 ---
 
-*Internal documentation. Generated 2026-05-05 from CHAT-5953 post-mortem + Anthropic engineering best practices.*
+*Generated 2026-05-05 — derived from a real cross-platform refactor post-mortem + Anthropic engineering best practices.*
