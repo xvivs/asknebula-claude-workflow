@@ -291,13 +291,14 @@ footer.foot{margin-top:48px; padding:24px 0; border-top:1px solid var(--border);
       <li><a href="#mistakes">Mis-classification Playbook</a></li>
       <li><a href="#dodont">Do / Don't</a></li>
       <li><a href="#tips">Tips</a></li>
+      <li><a href="#calibrate">Calibration Loop</a></li>
       <li><a href="#quickref">Quick Reference</a></li>
     </ol>
   </aside>
 
   <main>
     <section class="hero">
-      <span class="eyebrow">AskNebula Claude Workflow · v1.1 · 2026-05-05</span>
+      <span class="eyebrow">AskNebula Claude Workflow · v1.2 · 2026-05-05</span>
       <h1>Workflow Cook Book</h1>
       <p class="lede">Two skills. Three modes. One classifier. Скіли самі обирають рівень церемонії за scope — твоя задача обрати <em>тип</em> задачі, а не <em>розмір</em>.</p>
 
@@ -638,7 +639,59 @@ footer.foot{margin-top:48px; padding:24px 0; border-top:1px solid var(--border);
       </div>
     </section>
 
-    <!-- 9. Quick reference -->
+    <!-- 9. Calibration Loop -->
+    <section id="calibrate">
+      <h2><span class="num">9</span>Calibration Loop</h2>
+      <p class="lead">Phase 7 пише <code>history.md</code>. Скіл <code>/workflow-calibrate</code> читає N таких retrospective-ів + git log і пропонує surgical зміни до самого воркфлоу. Це closes the feedback loop — без нього "skill calibration" секція стає мертвим текстом.</p>
+
+      <h3>Коли запускати</h3>
+      <ul>
+        <li>Періодично — кожні 3–5 завершених воркфлоу</li>
+        <li>Після прогону, що "felt off" (класифікація схибила, ceremony здалася зайвою, defect просочився повз Phase 5)</li>
+        <li>Перед v2 / vN скіла</li>
+      </ul>
+
+      <h3>Що робить</h3>
+      <ol>
+        <li>Сканує <code>specs/**/history.md</code>, виводить numbered list з метаданими (Mode, type, date range, чи є явна Skill Calibration секція)</li>
+        <li>Чекає твоєї вибірки (<code>"1,3"</code> або <code>"all"</code>)</li>
+        <li>Запускає <code>workflow-calibrator</code> агента: він читає histories + pulls <code>git log</code> для періоду, шукає патерни в 6 dimensions</li>
+        <li>Пише <code>.claude/proposals/calibration-{date}.md</code> зі структурованими пропозиціями — diff + evidence + risk + steel-man</li>
+        <li><strong>Ніколи нічого не редагує сам.</strong> Ти reviewish + apply вручну</li>
+      </ol>
+
+      <h3>6 dimensions, що аналізуються</h3>
+      <div class="switchboard">
+      <table>
+        <thead><tr><th style="width:30%">Dimension</th><th>Що шукає</th></tr></thead>
+        <tbody>
+          <tr><td>Mode mis-classification</td><td>Histories де Mode escalated mid-flight, або retro каже "should have been X"</td></tr>
+          <tr><td>D-decision recurrence</td><td>Однаковий blocker class у ≥2 histories → промоут у default <code>design.md</code> template</td></tr>
+          <tr><td>Phase ceremony overhead</td><td>Skill Calibration цитує "Phase X added no value at this scale"</td></tr>
+          <tr><td>Agent prompt gaps</td><td>Агент імпровізував, потребував user correction, missed instruction</td></tr>
+          <tr><td>Verification gaps</td><td>Defect знайдено post-Phase 5 (MR review / production) — FV gate схибив</td></tr>
+          <tr><td>Time outliers</td><td>Same-Mode фаза тривала &gt;2× медіани без justification</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Conservative threshold</h3>
+      <div class="callout">
+        <div class="head">🔒 Чому threshold = ≥2 histories</div>
+        <p>Single-history pattern → шум, ризик overfitting. Виняток: history з явним <code>## Skill Calibration</code> блоком — це <em>ти сам</em> зафіксував lesson, тоді 1 evidence достатньо. Якщо нічого не тригериться — output: <code>"NO-OP — all phases performed within tolerance"</code>. Це валідний результат, не failure.</p>
+      </div>
+
+      <div class="callout danger">
+        <div class="head">❌ Anti-patterns</div>
+        <ul>
+          <li>Auto-applying пропозицій — workflow ламається тихо</li>
+          <li>Proposing changes "to feel productive" — marginal edits розмивають довіру до loop-а</li>
+          <li>Big rewrites — preferred surgical 3-line diffs з рaтioналом</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 10. Quick reference -->
     <section id="quickref" class="quickref">
       <h3>📋 Quick Reference Card</h3>
       <p style="color:var(--fg-2); margin-top:0">Друкуй або тримай у вкладці поряд з Claude Code.</p>
@@ -650,6 +703,10 @@ footer.foot{margin-top:48px; padding:24px 0; border-top:1px solid var(--border);
         <div class="qr-item">
           <div class="qr-label">Feature entry</div>
           <div class="qr-val">/new-feature-workflow</div>
+        </div>
+        <div class="qr-item">
+          <div class="qr-label">Calibration entry</div>
+          <div class="qr-val">/workflow-calibrate (after 3–5 completed workflows)</div>
         </div>
         <div class="qr-item">
           <div class="qr-label">Mode location</div>
@@ -671,7 +728,7 @@ footer.foot{margin-top:48px; padding:24px 0; border-top:1px solid var(--border);
     </section>
 
     <footer class="foot">
-      <span>📚 Workflow Cook Book · Internal · v1.1</span>
+      <span>📚 Workflow Cook Book · Internal · v1.2</span>
       <span>Source: <code>&lt;your-project&gt;/.claude/skills/{refactoring,new-feature}-workflow/SKILL.md</code></span>
     </footer>
   </main>
